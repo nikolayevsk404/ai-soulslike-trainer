@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: soulslike
+      POSTGRES_PASSWORD: soulslike
+      POSTGRES_DB: soulslike
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./infra/docker/backend.Dockerfile
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgres://soulslike:soulslike@postgres:5432/soulslike
+    depends_on:
+      - postgres
+    ports:
+      - "3001:3001"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./infra/docker/frontend.Dockerfile
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+
+volumes:
+  postgres_data:
