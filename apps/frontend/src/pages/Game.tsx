@@ -12,6 +12,10 @@ export const GamePage = () => {
   const { connected, status, state, replay, logs, sendAction, resetGame, startGame } = useSocket();
   const isRunning = connected && status === "running" && !Boolean(state.winner);
   const canStart = connected && arenaReady && !arenaError && status !== "running";
+  const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
+  const playerHpPercent = clampPercent(state.player.hp);
+  const playerStaminaPercent = clampPercent(state.player.stamina);
+  const bossHpPercent = clampPercent(state.ai.hp);
 
   useEffect(() => {
     setArenaReady(false);
@@ -54,6 +58,7 @@ export const GamePage = () => {
   };
 
   const retryArena = () => {
+    resetGame();
     setArenaVersion((current) => current + 1);
   };
 
@@ -61,11 +66,10 @@ export const GamePage = () => {
     <main className="page">
       <section className="hero">
         <div>
-          <p className="eyebrow">Limgrave Protocol</p>
-          <h1>Enfrente um boss que observa, aprende e contra-ataca.</h1>
+          <p className="eyebrow">DEV BY NIKOLAYEVSK</p>
+          <h1>IA Soulslike Training</h1>
           <p className="description">
-            Phaser controla a arena, o backend dita o combate e a apresentacao ja esta preparada para receber sprites
-            e background reais em PNG.
+            Duelo em tempo real onde um boss adaptativo aprende seu estilo e responde em combate.
           </p>
           {!arenaReady && !arenaError && <p className="loading-copy">Carregando arena Phaser...</p>}
           {arenaError && <p className="error-copy">{arenaError}</p>}
@@ -90,29 +94,6 @@ export const GamePage = () => {
             </button>
           </div>
 
-          <div className="hud">
-            <article>
-              <span>Player HP</span>
-              <strong>{state.player.hp}</strong>
-            </article>
-            <article>
-              <span>Player Stamina</span>
-              <strong>{state.player.stamina}</strong>
-            </article>
-            <article>
-              <span>AI HP</span>
-              <strong>{state.ai.hp}</strong>
-            </article>
-            <article>
-              <span>Distance</span>
-              <strong>{state.distance.toFixed(1)}</strong>
-            </article>
-            <article>
-              <span>Boss Action</span>
-              <strong>{state.ai.lastAction}</strong>
-            </article>
-          </div>
-
           <div className="arena-wrap">
             <>
               <PhaserArena
@@ -125,6 +106,23 @@ export const GamePage = () => {
                 state={state}
                 status={status}
               />
+              <div className="souls-hud" aria-hidden="true">
+                <div className="player-bars">
+                  <p>Player</p>
+                  <div className="bar-shell red">
+                    <div className="bar-fill" style={{ width: `${playerHpPercent}%` }} />
+                  </div>
+                  <div className="bar-shell green">
+                    <div className="bar-fill" style={{ width: `${playerStaminaPercent}%` }} />
+                  </div>
+                </div>
+                <div className="boss-bars">
+                  <p>Boss</p>
+                  <div className="bar-shell red boss">
+                    <div className="bar-fill" style={{ width: `${bossHpPercent}%` }} />
+                  </div>
+                </div>
+              </div>
               {!arenaReady && (
                 <div className="arena-loading">
                   <div className="arena-loading-card">
@@ -145,20 +143,7 @@ export const GamePage = () => {
             </>
           </div>
 
-          <div className="controls legend">
-            <button disabled={!isRunning} onClick={() => sendAction("attack")}>
-              J attack
-            </button>
-            <button disabled={!isRunning} onClick={() => sendAction("roll")}>
-              K roll
-            </button>
-            <button disabled={!isRunning} onClick={() => sendAction("dodge")}>
-              L dodge
-            </button>
-            <button disabled={!isRunning} onClick={() => sendAction("jump")}>
-              Space jump
-            </button>
-          </div>
+          <p className="controls-copy">Movimentar: setas esquerda/direita | Pular: Space | Atacar: Z | Rolar: X | Defender: C</p>
 
           <div className="winner">
             {!arenaReady && !arenaError && "Aguarde a arena terminar de carregar."}

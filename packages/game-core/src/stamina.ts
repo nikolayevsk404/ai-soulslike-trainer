@@ -5,7 +5,7 @@ const COST_MAP: Record<Exclude<CoreAction, "idle">, number> = {
   move_right: 2,
   jump: 8,
   attack: 10,
-  dodge: 12,
+  parry: 12,
   heavy_attack: 20,
   roll: 15
 };

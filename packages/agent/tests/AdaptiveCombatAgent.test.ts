@@ -23,17 +23,17 @@ describe("AdaptiveCombatAgent", () => {
     expect(action).toBe("heavy_attack");
   });
 
-  it("faz dodge quando o player ataca de perto", () => {
+  it("faz parry quando o player ataca de perto", () => {
     const agent = new AdaptiveCombatAgent();
     const action = agent.decide(
       buildState({
         playerDistance: 1.5,
         playerAttacking: true,
-        lastPlayerActions: ["attack", "attack", "dodge"]
+        lastPlayerActions: ["attack", "attack", "parry"]
       })
     );
 
-    expect(action).toBe("dodge");
+    expect(action).toBe("parry");
   });
 
   it("mantem memoria atualizada com distancia media", () => {

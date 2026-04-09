@@ -5,7 +5,7 @@ export type CoreAction =
   | "move_right"
   | "jump"
   | "attack"
-  | "dodge"
+  | "parry"
   | "heavy_attack"
   | "roll";
 

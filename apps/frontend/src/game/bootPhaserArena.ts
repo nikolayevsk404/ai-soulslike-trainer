@@ -1,5 +1,6 @@
 import type { GameState } from "@ai-soulslike/game-core";
 import type { MatchStatus } from "../services/socket";
+import { soulslikeAssets } from "./assets";
 
 type CoreAction = GameState["player"]["lastAction"];
 
@@ -20,11 +21,15 @@ export interface PhaserArenaController {
   sync: (patch: Pick<PhaserArenaHooks, "connected" | "status" | "state" | "onAction">) => void;
 }
 
-const MIN_WORLD_X = 110;
-const MAX_WORLD_X = 850;
+const ARENA_WIDTH = 960;
+const ARENA_HEIGHT = 540;
+const MIN_WORLD_X = ARENA_WIDTH * 0.2;
+const MAX_WORLD_X = ARENA_WIDTH * 0.8;
 const POSITION_MIN = -6;
 const POSITION_MAX = 6;
-const groundY = 432;
+const groundY = 446;
+
+type VisualState = "standing" | "walking1" | "walking2" | "jumping" | "attacking" | "rolling" | "parrying" | "dead";
 
 const toWorldX = (position: number) => {
   const normalized = (position - POSITION_MIN) / (POSITION_MAX - POSITION_MIN);
@@ -63,6 +68,7 @@ export const bootPhaserArena = async (
 
   let player: any;
   let boss: any;
+  let background: any;
   let overlay: any;
   let cursors: any;
   let keys: Record<string, any> | undefined;
@@ -70,30 +76,37 @@ export const bootPhaserArena = async (
 
   const scene = {
     key: "arena",
+    preload(this: any) {
+      hooks.onStageChange?.("carregando assets");
+
+      this.load.image("arena-background", soulslikeAssets.background);
+
+      this.load.image("player-standing", soulslikeAssets.player.standing);
+      this.load.image("player-walking1", soulslikeAssets.player.walking1);
+      this.load.image("player-walking2", soulslikeAssets.player.walking2);
+      this.load.image("player-jumping", soulslikeAssets.player.jumping);
+      this.load.image("player-attacking", soulslikeAssets.player.attacking);
+      this.load.image("player-rolling", soulslikeAssets.player.rolling);
+      this.load.image("player-parrying", soulslikeAssets.player.parrying);
+      this.load.image("player-dead", soulslikeAssets.player.dead);
+
+      this.load.image("boss-standing", soulslikeAssets.boss.standing);
+      this.load.image("boss-walking1", soulslikeAssets.boss.walking1);
+      this.load.image("boss-walking2", soulslikeAssets.boss.walking2);
+      this.load.image("boss-jumping", soulslikeAssets.boss.jumping);
+      this.load.image("boss-attacking", soulslikeAssets.boss.attacking);
+      this.load.image("boss-dead", soulslikeAssets.boss.dead);
+    },
     create(this: any) {
       hooks.onStageChange?.("scene.create");
-
-      this.add.rectangle(480, 270, 960, 540, 0x0f0d12, 1);
-      this.add.rectangle(480, 120, 960, 180, 0x1d1821, 0.9);
-      this.add.rectangle(480, 220, 960, 220, 0x141118, 0.75);
-      this.add.rectangle(480, 460, 960, 160, 0x09080b, 0.95);
-      this.add.rectangle(480, groundY + 4, 960, 8, 0xc7d0db, 0.3);
-      this.add.rectangle(480, groundY + 34, 960, 90, 0x0a090c, 0.92);
-      this.add.rectangle(210, 388, 120, 80, 0x1a1720, 0.65);
-      this.add.rectangle(750, 398, 180, 60, 0x1a1720, 0.55);
+      background = this.add.image(ARENA_WIDTH / 2, ARENA_HEIGHT / 2, "arena-background").setDepth(0);
+      background.setDisplaySize(ARENA_WIDTH, ARENA_HEIGHT);
 
       hooks.onStageChange?.("criando entidades");
-      player = this.add.rectangle(360, groundY, 52, 78, 0xe4e7ef, 1).setOrigin(0.5, 1);
-      boss = this.add.rectangle(620, groundY, 104, 148, 0x53698a, 1).setOrigin(0.5, 1);
-      player.setStrokeStyle(2, 0x1d1d22, 1);
-      boss.setStrokeStyle(3, 0x11141a, 1);
-      this.add
-        .text(28, 24, "WASD / setas para mover", {
-          fontFamily: "Cinzel, Georgia, serif",
-          fontSize: "18px",
-          color: "#f2e5c8"
-        })
-        .setDepth(10);
+      player = this.add.image(MIN_WORLD_X, groundY, "player-standing").setOrigin(0.5, 1).setDepth(4);
+      boss = this.add.image(MAX_WORLD_X, groundY, "boss-standing").setOrigin(0.5, 1).setDepth(4);
+      player.setDisplaySize(136, 170);
+      boss.setDisplaySize(216, 262);
 
       overlay = this.add
         .text(480, 262, "", {
@@ -108,13 +121,9 @@ export const bootPhaserArena = async (
       hooks.onStageChange?.("configurando input");
       cursors = this.input.keyboard?.createCursorKeys();
       keys = this.input.keyboard?.addKeys({
-        w: Phaser.Input.Keyboard.KeyCodes.W,
-        a: Phaser.Input.Keyboard.KeyCodes.A,
-        s: Phaser.Input.Keyboard.KeyCodes.S,
-        d: Phaser.Input.Keyboard.KeyCodes.D,
-        j: Phaser.Input.Keyboard.KeyCodes.J,
-        k: Phaser.Input.Keyboard.KeyCodes.K,
-        l: Phaser.Input.Keyboard.KeyCodes.L,
+        z: Phaser.Input.Keyboard.KeyCodes.Z,
+        x: Phaser.Input.Keyboard.KeyCodes.X,
+        c: Phaser.Input.Keyboard.KeyCodes.C,
         space: Phaser.Input.Keyboard.KeyCodes.SPACE
       }) as Record<string, any>;
 
@@ -124,10 +133,9 @@ export const bootPhaserArena = async (
         Phaser.Input.Keyboard.KeyCodes.LEFT,
         Phaser.Input.Keyboard.KeyCodes.RIGHT,
         Phaser.Input.Keyboard.KeyCodes.SPACE,
-        Phaser.Input.Keyboard.KeyCodes.W,
-        Phaser.Input.Keyboard.KeyCodes.A,
-        Phaser.Input.Keyboard.KeyCodes.S,
-        Phaser.Input.Keyboard.KeyCodes.D
+        Phaser.Input.Keyboard.KeyCodes.Z,
+        Phaser.Input.Keyboard.KeyCodes.X,
+        Phaser.Input.Keyboard.KeyCodes.C
       ]);
 
       hooks.onStageChange?.("arena pronta");
@@ -147,14 +155,66 @@ export const bootPhaserArena = async (
       player.y = Phaser.Math.Linear(player.y, groundY - playerJumpOffset, 0.35);
       boss.y = Phaser.Math.Linear(boss.y, groundY - bossJumpOffset, 0.35);
 
-      const bossScale = hooks.state.ai.lastAction === "heavy_attack" ? 1.08 : 1;
-      const playerScale = hooks.state.player.lastAction === "roll" ? 0.92 : 1;
+      const walkingFrame: "walking1" | "walking2" = Math.floor(time / 500) % 2 === 0 ? "walking1" : "walking2";
+
+      const resolveVisualState = (
+        fighter: GameState["player"],
+        status: MatchStatus,
+        isWinner: boolean,
+        actor: "player" | "boss"
+      ): VisualState => {
+        if (fighter.hp <= 0 || (status === "finished" && !isWinner)) {
+          return "dead";
+        }
+
+        if (fighter.airborne || fighter.lastAction === "jump") {
+          return "jumping";
+        }
+
+        if (fighter.lastAction === "attack" || fighter.lastAction === "heavy_attack") {
+          return "attacking";
+        }
+
+        if (fighter.lastAction === "move_left" || fighter.lastAction === "move_right") {
+          return walkingFrame;
+        }
+
+        if (fighter.lastAction === "roll" && actor === "player") {
+          return "rolling";
+        }
+
+        if (fighter.lastAction === "parry" && actor === "player") {
+          return "parrying";
+        }
+
+        return "standing";
+      };
+
+      const playerVisual = resolveVisualState(hooks.state.player, hooks.status, hooks.state.winner === "player", "player");
+      const bossVisual = resolveVisualState(hooks.state.ai, hooks.status, hooks.state.winner === "ai", "boss");
+
+      const nextPlayerTexture = `player-${playerVisual}`;
+      const nextBossTexture = `boss-${bossVisual}`;
+
+      if (player.texture?.key !== nextPlayerTexture) {
+        player.setTexture(nextPlayerTexture);
+      }
+
+      if (boss.texture?.key !== nextBossTexture) {
+        boss.setTexture(nextBossTexture);
+      }
+
+      player.setFlipX(hooks.state.player.facing < 0);
+      boss.setFlipX(hooks.state.ai.facing < 0);
+
+      const bossScale = hooks.state.ai.lastAction === "heavy_attack" ? 1.05 : 1;
+      const playerScale = hooks.state.player.lastAction === "roll" ? 0.94 : 1;
       player.setScale(Phaser.Math.Linear(player.scaleX, playerScale, 0.22));
       boss.setScale(Phaser.Math.Linear(boss.scaleX, bossScale, 0.18));
 
       if (overlay) {
         if (hooks.status === "waiting") {
-          overlay.setText("Pressione START para entrar na luta");
+          overlay.setText("Pressione START para começar");
           overlay.setVisible(true);
         } else if (hooks.status === "finished") {
           overlay.setText(hooks.state.winner === "player" ? "Vitoria" : "You Died");
@@ -179,26 +239,26 @@ export const bootPhaserArena = async (
         return true;
       };
 
-      if (trigger("move_left", cursors.left.isDown || keys.a.isDown)) {
+      if (trigger("move_left", cursors.left.isDown)) {
         hooks.onAction("move_left");
-      } else if (trigger("move_right", cursors.right.isDown || keys.d.isDown)) {
+      } else if (trigger("move_right", cursors.right.isDown)) {
         hooks.onAction("move_right");
       }
 
-      if (trigger("jump", cursors.up.isDown || keys.w.isDown || keys.space.isDown, 320)) {
+      if (trigger("jump", cursors.up.isDown || keys.space.isDown, 320)) {
         hooks.onAction("jump");
       }
 
-      if (trigger("attack", keys.j.isDown, 240)) {
+      if (trigger("attack", keys.z.isDown, 240)) {
         hooks.onAction("attack");
       }
 
-      if (trigger("roll", keys.k.isDown || cursors.down.isDown, 260)) {
+      if (trigger("roll", keys.x.isDown || cursors.down.isDown, 260)) {
         hooks.onAction("roll");
       }
 
-      if (trigger("dodge", keys.l.isDown, 260)) {
-        hooks.onAction("dodge");
+      if (trigger("parry", keys.c.isDown, 260)) {
+        hooks.onAction("parry");
       }
     }
   };
@@ -208,8 +268,8 @@ export const bootPhaserArena = async (
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: container,
-    width: 960,
-    height: 540,
+    width: ARENA_WIDTH,
+    height: ARENA_HEIGHT,
     transparent: true,
     backgroundColor: "#000000",
     scene,

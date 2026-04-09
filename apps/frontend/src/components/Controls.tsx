@@ -1,6 +1,6 @@
 import type { CoreAction } from "@ai-soulslike/game-core";
 
-const actions: CoreAction[] = ["attack", "dodge", "roll"];
+const actions: CoreAction[] = ["attack", "parry", "roll"];
 
 interface ControlsProps {
   disabled?: boolean;

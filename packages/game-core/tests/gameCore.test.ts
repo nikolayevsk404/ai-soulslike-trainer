@@ -3,7 +3,13 @@ import { applyAction, createInitialGameState, gameLoop } from "../src";
 
 describe("game-core", () => {
   it("aplica dano em ataque simples", () => {
-    const state = createInitialGameState();
+    const base = createInitialGameState();
+    const state = {
+      ...base,
+      player: { ...base.player, position: 0 },
+      ai: { ...base.ai, position: 2 },
+      distance: 2
+    };
     const nextState = applyAction(state, "player", "attack");
 
     expect(nextState.ai.hp).toBe(90);
@@ -21,9 +27,12 @@ describe("game-core", () => {
   });
 
   it("define vencedor quando hp chega a zero", () => {
+    const base = createInitialGameState();
     const state = {
-      ...createInitialGameState(),
-      ai: { ...createInitialGameState().ai, hp: 15 }
+      ...base,
+      player: { ...base.player, position: 0 },
+      ai: { ...base.ai, hp: 15, position: 2 },
+      distance: 2
     };
 
     const nextState = applyAction(state, "player", "heavy_attack");
@@ -34,7 +43,7 @@ describe("game-core", () => {
     const state = createInitialGameState();
     const nextState = applyAction(state, "player", "move_right");
 
-    expect(nextState.player.position).toBe(0.8);
+    expect(nextState.player.position).toBe(-5.2);
     expect(nextState.player.facing).toBe(1);
   });
 

@@ -18,7 +18,7 @@ export class AdaptiveCombatAgent {
     }
 
     if (state.playerDistance < 2 && state.playerAttacking && state.aiStamina >= 12) {
-      return "dodge";
+      return "parry";
     }
 
     if (state.playerDistance <= 3.5 && state.aiStamina >= 10) {

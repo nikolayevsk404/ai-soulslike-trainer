@@ -38,7 +38,7 @@ export const applyAction = (state: GameState, actor: ActorType, action: CoreActi
         ? 7
         : action === "attack"
           ? 5
-          : action === "roll" || action === "dodge"
+          : action === "roll" || action === "parry"
             ? 4
             : action === "jump"
               ? 3
@@ -48,7 +48,7 @@ export const applyAction = (state: GameState, actor: ActorType, action: CoreActi
   let updatedTarget = { ...targetState };
 
   if ((action === "attack" && distance <= 3) || (action === "heavy_attack" && distance <= 3.5)) {
-    const damage = updatedTarget.lastAction === "dodge" || updatedTarget.lastAction === "roll" ? 0 : getDamage(action);
+    const damage = updatedTarget.lastAction === "parry" || updatedTarget.lastAction === "roll" ? 0 : getDamage(action);
     updatedTarget = {
       ...updatedTarget,
       hp: Math.max(0, updatedTarget.hp - damage)
@@ -79,13 +79,10 @@ export const applyAction = (state: GameState, actor: ActorType, action: CoreActi
     };
   }
 
-  if (action === "dodge" || action === "roll") {
+  if (action === "roll") {
     updatedActor = {
       ...updatedActor,
-      position:
-        action === "dodge"
-          ? clampPosition(actorState.position - actorState.facing * 0.9)
-          : clampPosition(actorState.position + actorState.facing * 1.2)
+      position: clampPosition(actorState.position + actorState.facing * 1.2)
     };
   }
 

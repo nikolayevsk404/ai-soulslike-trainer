@@ -1,6 +1,6 @@
 export type CombatAction =
   | "attack"
-  | "dodge"
+  | "parry"
   | "heavy_attack"
   | "wait"
   | "roll"

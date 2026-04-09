@@ -5,7 +5,7 @@ export const createInitialGameState = (): GameState => ({
   player: {
     hp: 100,
     stamina: 100,
-    position: 0,
+    position: -6,
     velocityY: 0,
     facing: 1,
     airborne: false,
@@ -15,14 +15,14 @@ export const createInitialGameState = (): GameState => ({
   ai: {
     hp: 100,
     stamina: 100,
-    position: 3,
+    position: 6,
     velocityY: 0,
     facing: -1,
     airborne: false,
     lastAction: "idle",
     actionCooldown: 0
   },
-  distance: 3,
+  distance: 12,
   logs: [],
   winner: null
 });
