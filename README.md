@@ -1,3 +1,5 @@
+![Imagem](docs/img/ai-soulslike-training.png)
+
 # AI Soulslike Trainer
 
 Monorepo de simulacao de combate 2D em tempo real com IA adaptativa, backend WebSocket e regras de jogo desacopladas.

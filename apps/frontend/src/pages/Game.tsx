@@ -148,7 +148,7 @@ export const GamePage = () => {
           <div className="winner">
             {!arenaReady && !arenaError && "Aguarde a arena terminar de carregar."}
             {!arenaReady && arenaError && "A arena falhou ao iniciar corretamente."}
-            {arenaReady && status === "waiting" && "Pressione Start para comecar a luta."}
+            {arenaReady && status === "waiting" && "Pressione Start para começar."}
             {status === "running" && `Tick ${state.tick}`}
             {status === "finished" && `${state.winner === "player" ? "Voce" : "IA"} venceu.`}
           </div>
