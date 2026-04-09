@@ -1,21 +1,27 @@
-# Documentacao do AI Soulslike Trainer
+# Docs - AI Soulslike Trainer
 
-Esta pasta reune os documentos que serviram de base para definicao do produto, arquitetura e backlog inicial.
+Esta pasta concentra os documentos de contexto do produto, arquitetura tecnica e planejamento inicial.
 
-## Arquivos
+## Objetivo da pasta
 
-- `AI-SOULSLIKE-README.md`: contexto do projeto, objetivo, stack e roadmap inicial
-- `AI-SOULSLIKE-ARCHITECTURE.md`: proposta de arquitetura do monorepo e responsabilidades por modulo
-- `AI-SOULSLIKE-AGENT.md`: resumo das regras e do papel do `AdaptiveCombatAgent`
-- `AI-SOULSLIKE-TASKS.md`: checklist curto das entregas iniciais
+- reunir especificacoes funcionais e tecnicas em um unico lugar
+- facilitar entendimento da arquitetura por novos contribuidores
+- manter backlog e diretrizes de evolucao do projeto
 
-## Ordem sugerida de leitura
+## Indice de documentos
+
+- `AI-SOULSLIKE-README.md`: visao de produto, stack e escopo funcional
+- `AI-SOULSLIKE-ARCHITECTURE.md`: proposta de arquitetura e responsabilidades por pacote
+- `AI-SOULSLIKE-AGENT.md`: regras e comportamento do `AdaptiveCombatAgent`
+- `AI-SOULSLIKE-TASKS.md`: tarefas iniciais para execucao incremental
+
+## Ordem recomendada de leitura
 
 1. `AI-SOULSLIKE-README.md`
 2. `AI-SOULSLIKE-ARCHITECTURE.md`
 3. `AI-SOULSLIKE-AGENT.md`
 4. `AI-SOULSLIKE-TASKS.md`
 
-## Observacao
+## Relacao com a raiz do projeto
 
-Os arquivos originais foram organizados nesta pasta para deixar a raiz do projeto mais limpa e a consulta da documentacao mais direta.
+O `README.md` da raiz foca em setup e navegacao do repositorio. Esta pasta organiza o material de referencia para arquitetura, IA e roadmap do produto.
