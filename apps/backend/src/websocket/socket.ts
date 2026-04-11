@@ -45,7 +45,7 @@ export const createSocketServer = (server: Server, gameManager: GameManager) => 
       }
 
       if (message.type === "PLAYER_ACTION" && message.payload?.action) {
-        gameManager.queuePlayerAction(message.payload.action);
+        gameManager.queuePlayerAction(message.payload.action, message.payload.facing);
         return;
       }
 

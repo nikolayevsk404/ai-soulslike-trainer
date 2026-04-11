@@ -13,15 +13,11 @@ export class AdaptiveCombatAgent {
   decide(state: AgentGameState): CombatAction {
     this.updateMemory(state);
 
-    if (this.memory.rollFrequency > 0.6 && state.aiStamina >= 20) {
+    if ((this.memory.rollFrequency > 0.5 || this.memory.aggressivePlayer) && state.playerDistance <= 3.2 && state.aiStamina >= 20) {
       return "heavy_attack";
     }
 
-    if (state.playerDistance < 2 && state.playerAttacking && state.aiStamina >= 12) {
-      return "parry";
-    }
-
-    if (state.playerDistance <= 3.5 && state.aiStamina >= 10) {
+    if (state.playerDistance <= 3.0 && state.aiStamina >= 10) {
       return "attack";
     }
 

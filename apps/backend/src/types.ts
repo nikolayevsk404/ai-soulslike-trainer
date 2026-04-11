@@ -9,6 +9,7 @@ export interface ClientMessage {
   type: ClientEventType;
   payload?: {
     action?: CoreAction;
+    facing?: -1 | 1;
   };
 }
 

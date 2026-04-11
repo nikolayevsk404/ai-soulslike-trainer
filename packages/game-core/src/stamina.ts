@@ -1,13 +1,13 @@
 import type { CoreAction } from "./types";
 
 const COST_MAP: Record<Exclude<CoreAction, "idle">, number> = {
-  move_left: 2,
-  move_right: 2,
-  jump: 8,
-  attack: 10,
-  parry: 12,
-  heavy_attack: 20,
-  roll: 15
+  move_left: 0,
+  move_right: 0,
+  jump: 14,
+  attack: 18,
+  parry: 0,
+  heavy_attack: 28,
+  roll: 24
 };
 
 export const getActionCost = (action: CoreAction): number => {

@@ -9,6 +9,11 @@ export interface ReplayEntry {
   state: GameState;
 }
 
+export interface PlayerActionPayload {
+  action: CoreAction;
+  facing?: -1 | 1;
+}
+
 export interface ServerEventMap {
   AI_ACTION: { action: CoreAction };
   STATE_UPDATE: { state: GameState; replay: ReplayEntry[]; status: MatchStatus };

@@ -4,13 +4,14 @@ import { BehaviorLogService } from "../services/behaviorLogService";
 import type { MatchStatus, ReplayEntry } from "../types";
 
 export class GameManager {
-  private static readonly AI_OPENING_GRACE_TICKS = 12;
-  private static readonly AI_THINK_INTERVAL = 3;
+  private static readonly AI_OPENING_GRACE_TICKS = 20;
+  private static readonly AI_THINK_INTERVAL = 8;
+  private static readonly AI_MOVEMENT_INTERVAL = 2;
 
   private state: GameState = createInitialGameState();
   private readonly agentService = new AgentService();
   private readonly logService = new BehaviorLogService();
-  private pendingPlayerAction: CoreAction | null = null;
+  private pendingPlayerAction: { action: CoreAction; facing?: -1 | 1 } | null = null;
   private status: MatchStatus = "waiting";
 
   start() {
@@ -21,12 +22,12 @@ export class GameManager {
     this.status = "running";
   }
 
-  queuePlayerAction(action: CoreAction) {
+  queuePlayerAction(action: CoreAction, facing?: -1 | 1) {
     if (this.status !== "running") {
       return;
     }
 
-    this.pendingPlayerAction = action;
+    this.pendingPlayerAction = { action, facing };
   }
 
   reset() {
@@ -65,23 +66,29 @@ export class GameManager {
     const playerAction = this.pendingPlayerAction;
 
     if (playerAction) {
-      nextState = applyAction(nextState, "player", playerAction);
+      nextState = applyAction(nextState, "player", playerAction.action, { facingOverride: playerAction.facing });
     }
 
     let aiAction: CoreAction = "idle";
 
-    const aiCanAct =
-      nextState.tick > GameManager.AI_OPENING_GRACE_TICKS &&
-      nextState.tick % GameManager.AI_THINK_INTERVAL === 0;
+    const aiPastOpening = nextState.tick > GameManager.AI_OPENING_GRACE_TICKS;
+    const aiCanAttack = aiPastOpening && nextState.tick % GameManager.AI_THINK_INTERVAL === 0;
+    const aiCanMove = aiPastOpening && nextState.tick % GameManager.AI_MOVEMENT_INTERVAL === 0;
 
-    if (aiCanAct) {
+    if (aiCanAttack) {
       const agentDecision = this.agentService.decide(nextState);
       aiAction = this.agentService.toCoreAction(agentDecision);
 
-      if (aiAction === "idle") {
-        aiAction = this.agentService.decideMovement(nextState);
+      if (aiAction === "parry" || aiAction === "roll") {
+        aiAction = "idle";
       }
+    }
 
+    if (aiAction === "idle" && aiCanMove) {
+      aiAction = this.agentService.decideMovement(nextState);
+    }
+
+    if (aiAction !== "idle") {
       nextState = applyAction(nextState, "ai", aiAction);
     }
 
@@ -94,15 +101,15 @@ export class GameManager {
 
     await this.logService.log({
       tick: nextState.tick,
-      playerAction,
-      aiAction: aiCanAct ? aiAction : null,
+      playerAction: playerAction?.action ?? null,
+      aiAction: aiAction !== "idle" ? aiAction : null,
       state: nextState,
       memory: this.agentService.getMemory()
     });
 
     return {
       state: nextState,
-      aiAction: aiCanAct ? aiAction : null
+      aiAction: aiAction !== "idle" ? aiAction : null
     };
   }
 }

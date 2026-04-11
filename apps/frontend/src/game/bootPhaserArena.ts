@@ -1,5 +1,5 @@
 import type { GameState } from "@ai-soulslike/game-core";
-import type { MatchStatus } from "../services/socket";
+import type { MatchStatus, PlayerActionPayload } from "../services/socket";
 import { soulslikeAssets } from "./assets";
 
 type CoreAction = GameState["player"]["lastAction"];
@@ -10,7 +10,7 @@ export interface PhaserArenaHooks {
   connected: boolean;
   status: MatchStatus;
   state: GameState;
-  onAction: (action: CoreAction) => void;
+  onAction: (action: CoreAction | PlayerActionPayload) => void;
   onReady?: () => void;
   onError?: (message: string) => void;
   onStageChange?: (stage: string) => void;
@@ -41,8 +41,26 @@ const getJumpLift = (velocityY: number, airborne: boolean, peak = 96) => {
     return 0;
   }
 
-  const normalized = Math.max(0, 1 - Math.abs(velocityY) / 1.9);
+  const normalized = Math.max(0, 1 - Math.abs(velocityY) / 2);
   return normalized * peak;
+};
+
+const getVisualGroundOffset = (actor: "player" | "boss", visual: VisualState) => {
+  if (actor === "player") {
+    if (visual === "walking1") {
+      return 6;
+    }
+
+    if (visual === "walking2") {
+      return 2;
+    }
+
+    if (visual === "rolling") {
+      return 4;
+    }
+  }
+
+  return 0;
 };
 
 let phaserImportPromise: Promise<PhaserLike> | null = null;
@@ -77,6 +95,12 @@ export const bootPhaserArena = async (
   let lastStatus: MatchStatus | null = null;
   let keys: Record<string, any> | undefined;
   const actionCooldowns = new Map<string, number>();
+
+  const resetArenaAudio = () => {
+    bossMusic?.stop();
+    victorySound?.stop();
+    defeatSound?.stop();
+  };
 
   const scene = {
     key: "arena",
@@ -129,6 +153,8 @@ export const bootPhaserArena = async (
       hooks.onStageChange?.("configurando input");
       cursors = this.input.keyboard?.createCursorKeys();
       keys = this.input.keyboard?.addKeys({
+        a: Phaser.Input.Keyboard.KeyCodes.A,
+        d: Phaser.Input.Keyboard.KeyCodes.D,
         z: Phaser.Input.Keyboard.KeyCodes.Z,
         x: Phaser.Input.Keyboard.KeyCodes.X,
         c: Phaser.Input.Keyboard.KeyCodes.C,
@@ -140,6 +166,8 @@ export const bootPhaserArena = async (
         Phaser.Input.Keyboard.KeyCodes.DOWN,
         Phaser.Input.Keyboard.KeyCodes.LEFT,
         Phaser.Input.Keyboard.KeyCodes.RIGHT,
+        Phaser.Input.Keyboard.KeyCodes.A,
+        Phaser.Input.Keyboard.KeyCodes.D,
         Phaser.Input.Keyboard.KeyCodes.SPACE,
         Phaser.Input.Keyboard.KeyCodes.Z,
         Phaser.Input.Keyboard.KeyCodes.X,
@@ -159,14 +187,23 @@ export const bootPhaserArena = async (
       }
 
       if (hooks.status !== lastStatus) {
+        if (hooks.status === "waiting") {
+          resetArenaAudio();
+        }
+
         if (hooks.status === "running") {
+          victorySound?.stop();
+          defeatSound?.stop();
+
           if (!bossMusic.isPlaying) {
             bossMusic.play();
           }
         }
 
         if (hooks.status === "finished") {
-          this.sound.stopAll();
+          bossMusic.stop();
+          victorySound.stop();
+          defeatSound.stop();
 
           if (hooks.state.winner === "player") {
             victorySound.play();
@@ -178,16 +215,10 @@ export const bootPhaserArena = async (
         lastStatus = hooks.status;
       }
 
-      player.x = Phaser.Math.Linear(player.x, toWorldX(hooks.state.player.position), 0.18);
-      boss.x = Phaser.Math.Linear(boss.x, toWorldX(hooks.state.ai.position), 0.13);
+      player.x = Phaser.Math.Linear(player.x, toWorldX(hooks.state.player.position), 0.36);
+      boss.x = Phaser.Math.Linear(boss.x, toWorldX(hooks.state.ai.position), 0.28);
 
-      const playerJumpOffset = getJumpLift(hooks.state.player.velocityY, hooks.state.player.airborne, 92);
-      const bossJumpOffset = getJumpLift(hooks.state.ai.velocityY, hooks.state.ai.airborne, 82);
-
-      player.y = Phaser.Math.Linear(player.y, groundY - playerJumpOffset, 0.35);
-      boss.y = Phaser.Math.Linear(boss.y, groundY - bossJumpOffset, 0.35);
-
-      const walkingFrame: "walking1" | "walking2" = Math.floor(time / 500) % 2 === 0 ? "walking1" : "walking2";
+      const walkingFrame: "walking1" | "walking2" = Math.floor(time / 220) % 2 === 0 ? "walking1" : "walking2";
 
       const resolveVisualState = (
         fighter: GameState["player"],
@@ -225,6 +256,14 @@ export const bootPhaserArena = async (
       const playerVisual = resolveVisualState(hooks.state.player, hooks.status, hooks.state.winner === "player", "player");
       const bossVisual = resolveVisualState(hooks.state.ai, hooks.status, hooks.state.winner === "ai", "boss");
 
+      const playerJumpOffset = getJumpLift(hooks.state.player.velocityY, hooks.state.player.airborne, 92);
+      const bossJumpOffset = getJumpLift(hooks.state.ai.velocityY, hooks.state.ai.airborne, 82);
+      const playerGroundOffset = getVisualGroundOffset("player", playerVisual);
+      const bossGroundOffset = getVisualGroundOffset("boss", bossVisual);
+
+      player.y = Phaser.Math.Linear(player.y, groundY - playerJumpOffset + playerGroundOffset, 0.42);
+      boss.y = Phaser.Math.Linear(boss.y, groundY - bossJumpOffset + bossGroundOffset, 0.42);
+
       const nextPlayerTexture = `player-${playerVisual}`;
       const nextBossTexture = `boss-${bossVisual}`;
 
@@ -239,10 +278,10 @@ export const bootPhaserArena = async (
       player.setFlipX(hooks.state.player.facing < 0);
       boss.setFlipX(hooks.state.ai.facing < 0);
 
-      const bossScale = hooks.state.ai.lastAction === "heavy_attack" ? 1.05 : 1;
+      const bossScale = hooks.state.ai.lastAction === "heavy_attack" ? 1.03 : 1;
       const playerScale = hooks.state.player.lastAction === "roll" ? 0.94 : 1;
-      player.setScale(Phaser.Math.Linear(player.scaleX, playerScale, 0.22));
-      boss.setScale(Phaser.Math.Linear(boss.scaleX, bossScale, 0.18));
+      player.setScale(Phaser.Math.Linear(player.scaleX, playerScale, 0.18));
+      boss.setScale(Phaser.Math.Linear(boss.scaleX, bossScale, 0.12));
 
       if (overlay) {
         if (hooks.status === "waiting") {
@@ -271,26 +310,30 @@ export const bootPhaserArena = async (
         return true;
       };
 
-      if (trigger("move_left", cursors.left.isDown)) {
-        hooks.onAction("move_left");
-      } else if (trigger("move_right", cursors.right.isDown)) {
-        hooks.onAction("move_right");
+      const movingLeft = cursors.left.isDown || keys.a.isDown;
+      const movingRight = cursors.right.isDown || keys.d.isDown;
+      const inputFacing: -1 | 1 | undefined = movingLeft ? -1 : movingRight ? 1 : undefined;
+
+      if (trigger("move_left", movingLeft, 120)) {
+        hooks.onAction({ action: "move_left", facing: -1 });
+      } else if (trigger("move_right", movingRight, 120)) {
+        hooks.onAction({ action: "move_right", facing: 1 });
       }
 
-      if (trigger("jump", cursors.up.isDown || keys.space.isDown, 320)) {
-        hooks.onAction("jump");
+      if (trigger("jump", cursors.up.isDown || keys.space.isDown, 520)) {
+        hooks.onAction(typeof inputFacing === "number" ? { action: "jump", facing: inputFacing } : "jump");
       }
 
-      if (trigger("attack", keys.z.isDown, 240)) {
-        hooks.onAction("attack");
+      if (trigger("attack", keys.z.isDown, 420)) {
+        hooks.onAction(typeof inputFacing === "number" ? { action: "attack", facing: inputFacing } : "attack");
       }
 
-      if (trigger("roll", keys.x.isDown || cursors.down.isDown, 260)) {
-        hooks.onAction("roll");
+      if (trigger("roll", keys.x.isDown || cursors.down.isDown, 460)) {
+        hooks.onAction({ action: "roll", facing: inputFacing ?? hooks.state.player.facing });
       }
 
-      if (trigger("parry", keys.c.isDown, 260)) {
-        hooks.onAction("parry");
+      if (trigger("parry", keys.c.isDown, 120)) {
+        hooks.onAction(typeof inputFacing === "number" ? { action: "parry", facing: inputFacing } : "parry");
       }
     }
   };
@@ -313,6 +356,7 @@ export const bootPhaserArena = async (
 
   return {
     destroy: () => {
+      resetArenaAudio();
       game.destroy(true);
     },
     sync: (patch) => {

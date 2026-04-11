@@ -1,9 +1,9 @@
 import { regenStamina } from "./stamina";
-import type { GameState } from "./types";
+import type { FighterState, GameState } from "./types";
 
 const updateAirState = (velocityY: number, airborne: boolean) => {
   const nextVelocityY = airborne ? velocityY - 0.35 : 0;
-  const nextAirborne = airborne && nextVelocityY > -1.9;
+  const nextAirborne = airborne && nextVelocityY > -2;
 
   return {
     velocityY: nextAirborne ? nextVelocityY : 0,
@@ -11,24 +11,25 @@ const updateAirState = (velocityY: number, airborne: boolean) => {
   };
 };
 
-export const gameLoop = (state: GameState): GameState => {
-  const nextPlayerAir = updateAirState(state.player.velocityY, state.player.airborne);
-  const nextAiAir = updateAirState(state.ai.velocityY, state.ai.airborne);
+const tickFighter = (fighter: FighterState): FighterState => {
+  const nextAir = updateAirState(fighter.velocityY, fighter.airborne);
+  const nextCooldown = Math.max(0, fighter.actionCooldown - 1);
+  const shouldReturnToIdle = nextCooldown === 0 && !nextAir.airborne && fighter.lastAction !== "idle";
 
+  return {
+    ...fighter,
+    ...nextAir,
+    stamina: regenStamina(fighter.stamina),
+    actionCooldown: nextCooldown,
+    lastAction: shouldReturnToIdle ? "idle" : fighter.lastAction
+  };
+};
+
+export const gameLoop = (state: GameState): GameState => {
   return {
     ...state,
     tick: state.tick + 1,
-    player: {
-      ...state.player,
-      ...nextPlayerAir,
-      stamina: regenStamina(state.player.stamina),
-      actionCooldown: Math.max(0, state.player.actionCooldown - 1)
-    },
-    ai: {
-      ...state.ai,
-      ...nextAiAir,
-      stamina: regenStamina(state.ai.stamina),
-      actionCooldown: Math.max(0, state.ai.actionCooldown - 1)
-    }
+    player: tickFighter(state.player),
+    ai: tickFighter(state.ai)
   };
 };

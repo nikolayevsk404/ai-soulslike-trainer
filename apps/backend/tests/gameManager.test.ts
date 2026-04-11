@@ -21,11 +21,11 @@ describe("GameManager", () => {
 
     let result = await manager.tick();
 
-    for (let index = 0; index < 14; index += 1) {
+    for (let index = 0; index < 23; index += 1) {
       result = await manager.tick();
     }
 
-    expect(result.state.tick).toBe(15);
+    expect(result.state.tick).toBe(24);
     expect(result.state.logs.some((entry) => entry.actor === "ai")).toBe(true);
   });
 });

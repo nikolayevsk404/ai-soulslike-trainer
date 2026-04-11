@@ -1,6 +1,10 @@
 import { getActionCost } from "./stamina";
 import type { ActorType, CoreAction, FighterState, GameState } from "./types";
 
+interface ApplyActionOptions {
+  facingOverride?: -1 | 1;
+}
+
 const canSpendStamina = (fighter: FighterState, action: CoreAction) =>
   fighter.stamina >= getActionCost(action);
 
@@ -18,31 +22,52 @@ const getDamage = (action: CoreAction): number => {
   return 0;
 };
 
-export const applyAction = (state: GameState, actor: ActorType, action: CoreAction): GameState => {
+const getActionDuration = (action: CoreAction): number => {
+  switch (action) {
+    case "heavy_attack":
+      return 8;
+    case "attack":
+      return 5;
+    case "roll":
+      return 4;
+    case "parry":
+      return 2;
+    case "jump":
+      return 5;
+    case "move_left":
+    case "move_right":
+      return 2;
+    case "idle":
+    default:
+      return 0;
+  }
+};
+
+export const applyAction = (
+  state: GameState,
+  actor: ActorType,
+  action: CoreAction,
+  options: ApplyActionOptions = {}
+): GameState => {
   const actorState = state[actor];
   const target = actor === "player" ? "ai" : "player";
   const targetState = state[target];
   const cost = getActionCost(action);
   const distance = Math.abs(state.player.position - state.ai.position);
+  const facing = options.facingOverride ?? actorState.facing;
+  const isMoveAction = action === "move_left" || action === "move_right";
+  const canAdjustAirMovement = isMoveAction && actorState.airborne;
 
-  if (state.winner || actorState.actionCooldown > 0 || !canSpendStamina(actorState, action)) {
+  if (state.winner || (actorState.actionCooldown > 0 && !canAdjustAirMovement) || !canSpendStamina(actorState, action)) {
     return state;
   }
 
   let updatedActor = {
     ...actorState,
     stamina: Math.max(0, actorState.stamina - cost),
-    lastAction: action,
-    actionCooldown:
-      action === "heavy_attack"
-        ? 7
-        : action === "attack"
-          ? 5
-          : action === "roll" || action === "parry"
-            ? 4
-            : action === "jump"
-              ? 3
-              : 2
+    lastAction: canAdjustAirMovement ? actorState.lastAction : action,
+    facing,
+    actionCooldown: canAdjustAirMovement ? actorState.actionCooldown : getActionDuration(action)
   };
 
   let updatedTarget = { ...targetState };
@@ -58,7 +83,7 @@ export const applyAction = (state: GameState, actor: ActorType, action: CoreActi
   if (action === "move_left") {
     updatedActor = {
       ...updatedActor,
-      position: clampPosition(actorState.position - 0.8),
+      position: clampPosition(actorState.position - 0.95),
       facing: -1
     };
   }
@@ -66,7 +91,7 @@ export const applyAction = (state: GameState, actor: ActorType, action: CoreActi
   if (action === "move_right") {
     updatedActor = {
       ...updatedActor,
-      position: clampPosition(actorState.position + 0.8),
+      position: clampPosition(actorState.position + 0.95),
       facing: 1
     };
   }
@@ -75,14 +100,16 @@ export const applyAction = (state: GameState, actor: ActorType, action: CoreActi
     updatedActor = {
       ...updatedActor,
       airborne: true,
-      velocityY: 1.9
+      velocityY: 2,
+      position: clampPosition(actorState.position + facing * 0.35)
     };
   }
 
   if (action === "roll") {
     updatedActor = {
       ...updatedActor,
-      position: clampPosition(actorState.position + actorState.facing * 1.2)
+      position: clampPosition(actorState.position + facing * 1.55),
+      facing
     };
   }
 

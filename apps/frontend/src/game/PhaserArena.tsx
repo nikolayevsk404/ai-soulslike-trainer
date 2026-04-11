@@ -1,13 +1,13 @@
 import { useEffect, useRef } from "react";
 import type { GameState } from "@ai-soulslike/game-core";
-import type { MatchStatus } from "../services/socket";
+import type { MatchStatus, PlayerActionPayload } from "../services/socket";
 import { bootPhaserArena, type PhaserArenaController } from "./bootPhaserArena";
 
 interface PhaserArenaProps {
   state: GameState;
   connected: boolean;
   status: MatchStatus;
-  onAction: (action: GameState["player"]["lastAction"]) => void;
+  onAction: (action: GameState["player"]["lastAction"] | PlayerActionPayload) => void;
   onReady?: () => void;
   onError?: (message: string) => void;
   onStageChange?: (stage: string) => void;

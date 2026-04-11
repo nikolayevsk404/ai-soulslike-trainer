@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CoreAction, GameState } from "@ai-soulslike/game-core";
 import { createInitialGameState } from "@game-core";
-import { createGameSocket, type MatchStatus, type ReplayEntry, type ServerEvent } from "../services/socket";
+import { createGameSocket, type MatchStatus, type PlayerActionPayload, type ReplayEntry, type ServerEvent } from "../services/socket";
 
 type LogLine = {
   id: string;
@@ -59,19 +59,21 @@ export const useSocket = () => {
     };
   }, []);
 
-  const sendAction = (action: CoreAction) => {
+  const sendAction = (action: CoreAction | PlayerActionPayload) => {
     if (status !== "running") {
       return;
     }
 
+    const payload = typeof action === "string" ? { action } : action;
+
     socketRef.current?.send(
       JSON.stringify({
         type: "PLAYER_ACTION",
-        payload: { action }
+        payload
       })
     );
 
-    setLogs((current) => appendLog(current, `Player usou ${action}.`));
+    setLogs((current) => appendLog(current, `Player usou ${payload.action}.`));
   };
 
   const resetGame = () => {
