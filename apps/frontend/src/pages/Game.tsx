@@ -86,9 +86,9 @@ export const GamePage = () => {
             <button disabled={!canStart} onClick={startGame}>
               start
             </button>
-            <button className="ghost" onClick={retryArena}>
+            {/* <button className="ghost" onClick={retryArena}>
               recarregar arena
-            </button>
+            </button> */}
             <button className="ghost" onClick={resetGame}>
               reset fight
             </button>
