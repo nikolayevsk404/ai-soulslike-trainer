@@ -71,6 +71,10 @@ export const bootPhaserArena = async (
   let background: any;
   let overlay: any;
   let cursors: any;
+  let bossMusic: any;
+  let victorySound: any;
+  let defeatSound: any;
+  let lastStatus: MatchStatus | null = null;
   let keys: Record<string, any> | undefined;
   const actionCooldowns = new Map<string, number>();
 
@@ -96,6 +100,10 @@ export const bootPhaserArena = async (
       this.load.image("boss-jumping", soulslikeAssets.boss.jumping);
       this.load.image("boss-attacking", soulslikeAssets.boss.attacking);
       this.load.image("boss-dead", soulslikeAssets.boss.dead);
+
+      this.load.audio("soundtrack", "assets/sounds/soundtrack.mp3");
+      this.load.audio("victory", "assets/sounds/victory.mp3");
+      this.load.audio("defeat", "assets/sounds/defeat.mp3");
     },
     create(this: any) {
       hooks.onStageChange?.("scene.create");
@@ -140,10 +148,34 @@ export const bootPhaserArena = async (
 
       hooks.onStageChange?.("arena pronta");
       hooks.onReady?.();
+
+      bossMusic = this.sound.add("soundtrack", { loop: true, volume: 0.5 });
+      victorySound = this.sound.add("victory", { volume: 0.7 });
+      defeatSound = this.sound.add("defeat", { volume: 0.7 });
     },
     update(this: any, time: number) {
       if (!player || !boss) {
         return;
+      }
+
+      if (hooks.status !== lastStatus) {
+        if (hooks.status === "running") {
+          if (!bossMusic.isPlaying) {
+            bossMusic.play();
+          }
+        }
+
+        if (hooks.status === "finished") {
+          this.sound.stopAll();
+
+          if (hooks.state.winner === "player") {
+            victorySound.play();
+          } else {
+            defeatSound.play();
+          }
+        }
+
+        lastStatus = hooks.status;
       }
 
       player.x = Phaser.Math.Linear(player.x, toWorldX(hooks.state.player.position), 0.18);
@@ -217,7 +249,7 @@ export const bootPhaserArena = async (
           overlay.setText("Pressione START para começar");
           overlay.setVisible(true);
         } else if (hooks.status === "finished") {
-          overlay.setText(hooks.state.winner === "player" ? "Vitoria" : "You Died");
+          overlay.setText(hooks.state.winner === "player" ? "Enemy Felled" : "You Died");
           overlay.setVisible(true);
         } else {
           overlay.setVisible(false);
